@@ -43,9 +43,9 @@
 #ifndef _CV_MODEL_EST_H_
 #define _CV_MODEL_EST_H_
 
-#include "precomp.hpp"
+#include "opencv2/calib3d/calib3d.hpp"
 
-class CvModelEstimator2
+class CV_EXPORTS CvModelEstimator2
 {
 public:
     CvModelEstimator2(int _modelPoints, CvSize _modelSize, int _maxBasicSolutions);
@@ -69,6 +69,7 @@ protected:
     virtual bool getSubset( const CvMat* m1, const CvMat* m2,
                             CvMat* ms1, CvMat* ms2, int maxAttempts=1000 );
     virtual bool checkSubset( const CvMat* ms1, int count );
+    virtual bool isMinimalSetConsistent( const CvMat* /*m1*/, const CvMat* /*m2*/ ) { return true; };
 
     CvRNG rng;
     int modelPoints;

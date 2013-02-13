@@ -150,6 +150,9 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
 #ifdef HAVE_AVFOUNDATION
         CV_CAP_AVFOUNDATION,
 #endif
+#ifdef HAVE_GIGE_API
+        CV_CAP_GIGANETIX,
+#endif
         -1
     };
 
@@ -169,7 +172,9 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
     defined(HAVE_TYZX)         || \
     defined(HAVE_VFW)          || \
     defined(HAVE_LIBV4L)       || \
-    (defined(HAVE_CAMV4L) && defined(HAVE_CAMV4L2)) || \
+    defined(HAVE_CAMV4L)       || \
+    defined(HAVE_CAMV4L2)      || \
+    defined(HAVE_VIDEOIO)      || \
     defined(HAVE_GSTREAMER)    || \
     defined(HAVE_DC1394_2)     || \
     defined(HAVE_DC1394)       || \
@@ -182,6 +187,7 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
     defined(HAVE_XIMEA)        || \
     defined(HAVE_AVFOUNDATION) || \
     defined(HAVE_ANDROID_NATIVE_CAMERA) || \
+    defined(HAVE_GIGE_API) || \
     (0)
         // local variable to memorize the captured device
         CvCapture *capture;
@@ -212,7 +218,7 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
                 return capture;
 #endif
 
-#if defined HAVE_LIBV4L || (defined (HAVE_CAMV4L) && defined (HAVE_CAMV4L2))
+#if defined HAVE_LIBV4L || defined HAVE_CAMV4L || defined HAVE_CAMV4L2 || defined HAVE_VIDEOIO
             capture = cvCreateCameraCapture_V4L (index);
             if (capture)
                 return capture;
@@ -318,6 +324,15 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
                 return capture;
         break;
 #endif
+
+#ifdef HAVE_GIGE_API
+        case CV_CAP_GIGANETIX:
+            capture = cvCreateCameraCapture_Giganetix (index);
+            if (capture)
+                return capture;
+        break; // CV_CAP_GIGANETIX
+#endif
+
         }
     }
 

@@ -669,7 +669,7 @@ void Mat::push_back(const Mat& elems)
 
 
 Mat cvarrToMat(const CvArr* arr, bool copyData,
-               bool /*allowND*/, int coiMode)
+               bool /*allowND*/, int coiMode, AutoBuffer<double>* abuf )
 {
     if( !arr )
         return Mat();
@@ -687,10 +687,21 @@ Mat cvarrToMat(const CvArr* arr, bool copyData,
     if( CV_IS_SEQ(arr) )
     {
         CvSeq* seq = (CvSeq*)arr;
-        CV_Assert(seq->total > 0 && CV_ELEM_SIZE(seq->flags) == seq->elem_size);
+        int total = seq->total, type = CV_MAT_TYPE(seq->flags), esz = seq->elem_size;
+        if( total == 0 )
+            return Mat();
+        CV_Assert(total > 0 && CV_ELEM_SIZE(seq->flags) == esz);
         if(!copyData && seq->first->next == seq->first)
-            return Mat(seq->total, 1, CV_MAT_TYPE(seq->flags), seq->first->data);
-        Mat buf(seq->total, 1, CV_MAT_TYPE(seq->flags));
+            return Mat(total, 1, type, seq->first->data);
+        if( abuf )
+        {
+            abuf->allocate(((size_t)total*esz + sizeof(double)-1)/sizeof(double));
+            double* bufdata = *abuf;
+            cvCvtSeqToArray(seq, bufdata, CV_WHOLE_SEQ);
+            return Mat(total, 1, type, bufdata);
+        }
+
+        Mat buf(total, 1, type);
         cvCvtSeqToArray(seq, buf.data, CV_WHOLE_SEQ);
         return buf;
     }
@@ -830,7 +841,8 @@ int Mat::checkVector(int _elemChannels, int _depth, bool _requireContinuous) con
 {
     return (depth() == _depth || _depth <= 0) &&
         (isContinuous() || !_requireContinuous) &&
-        ((dims == 2 && (((rows == 1 || cols == 1) && channels() == _elemChannels) || (cols == _elemChannels))) ||
+        ((dims == 2 && (((rows == 1 || cols == 1) && channels() == _elemChannels) ||
+                        (cols == _elemChannels && channels() == 1))) ||
         (dims == 3 && channels() == 1 && size.p[2] == _elemChannels && (size.p[0] == 1 || size.p[1] == 1) &&
          (isContinuous() || step.p[1] == step.p[2]*size.p[2])))
     ? (int)(total()*channels()/_elemChannels) : -1;
@@ -1963,6 +1975,14 @@ void cv::transpose( InputArray _src, OutputArray _dst )
     _dst.create(src.cols, src.rows, src.type());
     Mat dst = _dst.getMat();
 
+    // handle the case of single-column/single-row matrices, stored in STL vectors.
+    if( src.rows != dst.cols || src.cols != dst.rows )
+    {
+        CV_Assert( src.size() == dst.size() && (src.cols == 1 || src.rows == 1) );
+        src.copyTo(dst);
+        return;
+    }
+
     if( dst.data == src.data )
     {
         TransposeInplaceFunc func = transposeInplaceTab[esz];
@@ -2487,7 +2507,7 @@ static void generateRandomCenter(const vector<Vec2f>& box, float* center, RNG& r
         center[j] = ((float)rng*(1.f+margin*2.f)-margin)*(box[j][1] - box[j][0]) + box[j][0];
 }
 
-class KMeansPPDistanceComputer
+class KMeansPPDistanceComputer : public ParallelLoopBody
 {
 public:
     KMeansPPDistanceComputer( float *_tdist2,
@@ -2503,10 +2523,10 @@ public:
           step(_step),
           stepci(_stepci) { }
 
-    void operator()( const cv::BlockedRange& range ) const
+    void operator()( const cv::Range& range ) const
     {
-        const int begin = range.begin();
-        const int end = range.end();
+        const int begin = range.start;
+        const int end = range.end;
 
         for ( int i = begin; i<end; i++ )
         {
@@ -2562,7 +2582,7 @@ static void generateCentersPP(const Mat& _data, Mat& _out_centers,
                     break;
             int ci = i;
 
-            parallel_for(BlockedRange(0, N),
+            parallel_for_(Range(0, N),
                          KMeansPPDistanceComputer(tdist2, data, dist, dims, step, step*ci));
             for( i = 0; i < N; i++ )
             {
@@ -2590,7 +2610,7 @@ static void generateCentersPP(const Mat& _data, Mat& _out_centers,
     }
 }
 
-class KMeansDistanceComputer
+class KMeansDistanceComputer : public ParallelLoopBody
 {
 public:
     KMeansDistanceComputer( double *_distances,
@@ -2604,10 +2624,10 @@ public:
     {
     }
 
-    void operator()( const BlockedRange& range ) const
+    void operator()( const Range& range ) const
     {
-        const int begin = range.begin();
-        const int end = range.end();
+        const int begin = range.start;
+        const int end = range.end;
         const int K = centers.rows;
         const int dims = centers.cols;
 
@@ -2864,7 +2884,7 @@ double cv::kmeans( InputArray _data, int K,
             // assign labels
             Mat dists(1, N, CV_64F);
             double* dist = dists.ptr<double>(0);
-            parallel_for(BlockedRange(0, N),
+            parallel_for_(Range(0, N),
                          KMeansDistanceComputer(dist, labels, data, centers));
             compactness = 0;
             for( i = 0; i < N; i++ )

@@ -584,10 +584,11 @@ cvGetHashedKey( CvFileStorage* fs, const char* str, int len, int create_missing 
     CvStringHashNode* node = 0;
     unsigned hashval = 0;
     int i, tab_size;
-    CvStringHash* map = fs->str_hash;
 
     if( !fs )
         return 0;
+
+    CvStringHash* map = fs->str_hash;
 
     if( len < 0 )
     {
@@ -5519,7 +5520,7 @@ void read( const FileNode& node, SparseMat& mat, const SparseMat& default_mat )
         return;
     }
     Ptr<CvSparseMat> m = (CvSparseMat*)cvRead((CvFileStorage*)node.fs, (CvFileNode*)*node);
-    CV_Assert(CV_IS_SPARSE_MAT(m));
+    CV_Assert(CV_IS_SPARSE_MAT(m.obj));
     SparseMat(m).copyTo(mat);
 }
 

@@ -796,7 +796,7 @@ struct CV_EXPORTS CvDTreeTrainData
     const CvMat* responses;
     CvMat* responses_copy; // used in Boosting
 
-    int buf_count, buf_size;
+    int buf_count, buf_size; // buf_size is obsolete, please do not use it, use expression ((int64)buf->rows * (int64)buf->cols / buf_count) instead
     bool shared;
     int is_buf_16u;
 
@@ -806,6 +806,12 @@ struct CV_EXPORTS CvDTreeTrainData
 
     CvMat* counts;
     CvMat* buf;
+    inline size_t get_length_subbuf() const
+    {
+        size_t res = (size_t)(work_var_count + 1) * (size_t)sample_count;
+        return res;
+    }
+
     CvMat* direction;
     CvMat* split_buf;
 
@@ -1250,6 +1256,8 @@ protected:
     virtual void trim_weights();
     virtual void write_params( CvFileStorage* fs ) const;
     virtual void read_params( CvFileStorage* fs, CvFileNode* node );
+
+    virtual void initialize_weights(double (&p)[2]);
 
     CvDTreeTrainData* data;
     CvBoostParams params;
@@ -2129,7 +2137,6 @@ typedef CvGBTrees GradientBoostingTrees;
 template<> CV_EXPORTS void Ptr<CvDTreeSplit>::delete_obj();
 
 CV_EXPORTS bool initModule_ml(void);
-
 }
 
 #endif // __cplusplus
