@@ -1,5 +1,6 @@
-from svgfig import *
+#/usr/bin/env python
 
+from svgfig import *
 import sys
 import argparse
 
@@ -52,28 +53,29 @@ class PatternMaker:
     c = canvas(self.g,width="%d%s"%(self.width,self.units),height="%d%s"%(self.height,self.units),viewBox="0 0 %d %d"%(self.width,self.height))
     c.inkview(self.output)
 
-def makePattern(cols,rows,output,p_type,units,square_size,page_width,page_height):
-    width = page_width
-    spacing = square_size
-    height = page_height
-    r = spacing / 5.0
-    g = SVG("g") # the svg group container
-    for x in range(1,cols+1):
-      for y in range(1,rows+1):
-        if "circle" in p_type:
-          dot = SVG("circle", cx=x * spacing, cy=y * spacing, r=r, fill="black")
-        g.append(dot)
-    c = canvas(g,width="%d%s"%(width,units),height="%d%s"%(height,units),viewBox="0 0 %d %d"%(width,height))
-    c.inkview(output)
+
+#def makePattern(cols,rows,output,p_type,units,square_size,page_width,page_height):
+#    width = page_width
+#    spacing = square_size
+#    height = page_height
+#    r = spacing / 5.0
+#    g = SVG("g") # the svg group container
+#    for x in range(1,cols+1):
+#      for y in range(1,rows+1):
+#        if "circle" in p_type:
+#          dot = SVG("circle", cx=x * spacing, cy=y * spacing, r=r, fill="black")
+#        g.append(dot)
+#    c = canvas(g,width="%d%s"%(width,units),height="%d%s"%(height,units),viewBox="0 0 %d %d"%(width,height))
+#    c.inkview(output)
 
 
 def main():
     # parse command line options
     parser = argparse.ArgumentParser(description=("Script to generate optical calibration patterns."
-                                                  " It is capable to generate a checkerboard, circles or assymetrical "
+                                                  " Currently supported are checkerboard, circles and assymetrical "
                                                   " circles calibration targets."))
-    parser.add_argument("type", choices=['circles', 'acircles', 'checkerboard'], help="Type of calibration target." )
-    parser.add_argument("-o", "--output",default = 'out.svg', help="File where the pattern is saved.  Default: out.svg")
+    parser.add_argument("type", choices=['circles', 'acircles', 'checkerboard'], help="Calibration target type." )
+    parser.add_argument("-o", "--output",default = 'out.svg', help="Pattern save file.  Default: out.svg")
     
     
     group_r_c= parser.add_argument_group("arrangement of markers")
@@ -82,10 +84,10 @@ def main():
     group_r_c.add_argument("-c","--columns", type=int, default = 6)
     
     group_size= parser.add_argument_group("pre-defined paper sizes")
-    group_size.add_argument("-p", "--paper_type", choices=['letter', 'a4', 'a3'], default = 'a4', help="Note: Using the predefined sizes, units are automatically reset to mm.  Default: ISO A4.")
+    group_size.add_argument("-p", "--paper_type", choices=['letter', 'a4', 'a3'], default = 'a4', help="Note: Using the predefined sizes, units are automatically reset to mm.  Default: ISO A4")
     
     group_w_h= parser.add_argument_group("custom paper size definition")
-    group_w_h.add_argument("-u", "--units", choices=['mm', 'cm', 'in'], default = 'mm', help="Default:  mm.")
+    group_w_h.add_argument("-u", "--units", choices=['mm', 'cm', 'in'], default = 'mm', help="Default:  mm")
     group_w_h.add_argument("-W", "--page_width",type=float)
     group_w_h.add_argument("-H", "--page_height",type=float)
 
@@ -95,7 +97,8 @@ def main():
     paper_sizes={"us":['mm',216,279],"a4":['mm',210,297],"a3":['mm',297,420]}
     if not (args.page_width and args.page_height):
         [args.units,args.page_width,args.page_height]=paper_sizes[args.paper_type]
-        print "Using paper size : ", args.paper_type
+        print "\nGenerating calibration pattern\n"  
+        print "Paper size   : ", args.paper_type
         
     # If circle or square spacing is not defined, calculate it to fit page dimensions
     if not args.spacing:
@@ -106,10 +109,10 @@ def main():
             w_spacing = math.floor(args.page_width / (args.columns))
             h_spacing = math.floor(args.page_height / (args.rows))
         args.spacing= min(w_spacing, h_spacing)
-        print "Calculated spacing between figures : ", args.spacing, args.units
+        print "Spacing      : ", args.spacing, args.units
     
-    print "Rows    : ", args.rows
-    print "Columns : ", args.columns
+    print "Rows         : ", args.rows
+    print "Columns      : ", args.columns
 
     pm = PatternMaker(args.columns,args.rows,args.output,args.units,args.spacing,args.page_width,args.page_height)
     #dict for easy lookup of pattern type
@@ -117,7 +120,7 @@ def main():
     mp[args.type]()
     # save pattern to output
     pm.save()
-    print "Pattern saved as : ", args.output
+    print "Saved as     : ", args.output
     
 if __name__ == "__main__":
     main()
