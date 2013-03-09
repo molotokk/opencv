@@ -53,7 +53,7 @@ namespace {
 struct SOctave
 {
     SOctave(const int i, const cv::Size& origObjSize, const cv::FileNode& fn)
-    : index(i), weaks((int)fn[SC_OCT_WEAKS]), scale(pow(2,(float)fn[SC_OCT_SCALE])),
+    : index(i), weaks((int)fn[SC_OCT_WEAKS]), scale(std::pow(2,(float)fn[SC_OCT_SCALE])),
       size(cvRound(origObjSize.width * scale), cvRound(origObjSize.height * scale)) {}
 
     int   index;
@@ -146,7 +146,7 @@ struct Level
        workRect(cv::Size(cvRound(w / (float)shrinkage),cvRound(h / (float)shrinkage))),
        objSize(cv::Size(cvRound(oct.size.width * relScale), cvRound(oct.size.height * relScale)))
     {
-        scaling[0] = ((relScale >= 1.f)? 1.f : (0.89f * pow(relScale, 1.099f / log(2.f)))) / (relScale * relScale);
+        scaling[0] = ((relScale >= 1.f)? 1.f : (0.89f * std::pow(relScale, 1.099f / std::log(2.f)))) / (relScale * relScale);
         scaling[1] = 1.f;
         scaleshift = static_cast<int>(relScale * (1 << 16));
     }
@@ -180,28 +180,30 @@ struct ChannelStorage
     cv::Mat hog;
     int shrinkage;
     int offset;
-    int step;
+    size_t step;
     int model_height;
 
     cv::Ptr<ChannelFeatureBuilder> builder;
 
     enum {HOG_BINS = 6, HOG_LUV_BINS = 10};
 
-    ChannelStorage(const cv::Mat& colored, int shr) : shrinkage(shr)
+    ChannelStorage(const cv::Mat& colored, int shr, std::string featureTypeStr) : shrinkage(shr)
     {
-        builder = ChannelFeatureBuilder::create();
-        (*builder)(colored, hog);
+        model_height = cvRound(colored.rows / (float)shrinkage);
+        if (featureTypeStr == "ICF") featureTypeStr = "HOG6MagLuv";
+
+        builder = ChannelFeatureBuilder::create(featureTypeStr);
+        (*builder)(colored, hog, cv::Size(cvRound(colored.cols / (float)shrinkage), model_height));
 
         step = hog.step1();
-        model_height = colored.rows / shrinkage;
     }
 
     float get(const int channel, const cv::Rect& area) const
     {
         const int *ptr = hog.ptr<const int>(0) + model_height * channel * step + offset;
 
-        int a = ptr[area.y * step + area.x];
-        int b = ptr[area.y * step + area.width];
+        int a = ptr[area.y      * step + area.x];
+        int b = ptr[area.y      * step + area.width];
         int c = ptr[area.height * step + area.width];
         int d = ptr[area.height * step + area.x];
 
@@ -223,7 +225,7 @@ struct Detector::Fields
 
     int shrinkage;
 
-    std::vector<SOctave>  octaves;
+    std::vector<SOctave> octaves;
     std::vector<Weak>    weaks;
     std::vector<Node>    nodes;
     std::vector<float>   leaves;
@@ -235,6 +237,8 @@ struct Detector::Fields
 
     typedef std::vector<SOctave>::iterator  octIt_t;
     typedef std::vector<Detection> dvector;
+
+    std::string featureTypeStr;
 
     void detectAt(const int dx, const int dy, const Level& level, const ChannelStorage& storage, dvector& detections) const
     {
@@ -287,7 +291,7 @@ struct Detector::Fields
         for (octIt_t oct = octaves.begin(); oct < octaves.end(); ++oct)
         {
             const SOctave& octave =*oct;
-            float logOctave = log(octave.scale);
+            float logOctave = std::log(octave.scale);
             float logAbsScale = fabs(logFactor - logOctave);
 
             if(logAbsScale < minAbsLog)
@@ -309,7 +313,7 @@ struct Detector::Fields
         CV_Assert(scales > 1);
 
         levels.clear();
-        float logFactor = (log(maxScale) - log(minScale)) / (scales -1);
+        float logFactor = (std::log(maxScale) - std::log(minScale)) / (scales -1);
 
         float scale = minScale;
         for (int sc = 0; sc < scales; ++sc)
@@ -317,7 +321,7 @@ struct Detector::Fields
             int width  = static_cast<int>(std::max(0.0f, frameSize.width  - (origObjWidth  * scale)));
             int height = static_cast<int>(std::max(0.0f, frameSize.height - (origObjHeight * scale)));
 
-            float logScale = log(scale);
+            float logScale = std::log(scale);
             octIt_t fit = fitOctave(logScale);
 
 
@@ -329,7 +333,7 @@ struct Detector::Fields
                 levels.push_back(level);
 
             if (fabs(scale - maxScale) < FLT_EPSILON) break;
-            scale = std::min(maxScale, expf(log(scale) + logFactor));
+            scale = std::min(maxScale, expf(std::log(scale) + logFactor));
         }
     }
 
@@ -340,6 +344,7 @@ struct Detector::Fields
         static const char *const SC_BOOST            = "BOOST";
 
         static const char *const SC_FEATURE_TYPE     = "featureType";
+        static const char *const SC_HOG6_MAG_LUV     = "HOG6MagLuv";
         static const char *const SC_ICF              = "ICF";
 
         static const char *const SC_ORIG_W           = "width";
@@ -357,15 +362,15 @@ struct Detector::Fields
         static const char *const FEATURE_FORMAT      = "featureFormat";
 
         // only Ada Boost supported
-        std::string stageTypeStr = (string)root[SC_STAGE_TYPE];
+        std::string stageTypeStr = (std::string)root[SC_STAGE_TYPE];
         CV_Assert(stageTypeStr == SC_BOOST);
 
-        std::string fformat = (string)root[FEATURE_FORMAT];
+        std::string fformat = (std::string)root[FEATURE_FORMAT];
         bool useBoxes = (fformat == "BOX");
 
         // only HOG-like integral channel features supported
-        string featureTypeStr = (string)root[SC_FEATURE_TYPE];
-        CV_Assert(featureTypeStr == SC_ICF);
+        featureTypeStr = (std::string)root[SC_FEATURE_TYPE];
+        CV_Assert(featureTypeStr == SC_ICF || featureTypeStr == SC_HOG6_MAG_LUV);
 
         origObjWidth  = (int)root[SC_ORIG_W];
         origObjHeight = (int)root[SC_ORIG_H];
@@ -398,7 +403,7 @@ struct Detector::Fields
                 fns = (*st)[SC_INTERNAL];
                 FileNodeIterator inIt = fns.begin(), inIt_end = fns.end();
                 for (; inIt != inIt_end;)
-                    nodes.push_back(Node(features.size(), inIt));
+                    nodes.push_back(Node((int)features.size(), inIt));
 
                 fns = (*st)[SC_LEAF];
                 inIt = fns.begin(), inIt_end = fns.end();
@@ -490,7 +495,7 @@ void Detector::detectNoRoi(const cv::Mat& image, std::vector<Detection>& objects
 {
     Fields& fld = *fields;
     // create integrals
-    ChannelStorage storage(image, fld.shrinkage);
+    ChannelStorage storage(image, fld.shrinkage, fld.featureTypeStr);
 
     typedef std::vector<Level>::const_iterator lIt;
     for (lIt it = fld.levels.begin(); it != fld.levels.end(); ++it)
@@ -504,7 +509,7 @@ void Detector::detectNoRoi(const cv::Mat& image, std::vector<Detection>& objects
         {
             for (int dx = 0; dx < level.workRect.width; ++dx)
             {
-                storage.offset = dy * storage.step + dx;
+                storage.offset = (int)(dy * storage.step + dx);
                 fld.detectAt(dx, dy, level, storage, objects);
             }
         }
@@ -538,7 +543,7 @@ void Detector::detect(cv::InputArray _image, cv::InputArray _rois, std::vector<D
         cv::Mat(mask, cv::Rect(r[i].x / shr, r[i].y / shr, r[i].width / shr , r[i].height / shr)).setTo(cv::Scalar::all(1));
 
     // create integrals
-    ChannelStorage storage(image, shr);
+    ChannelStorage storage(image, shr, fld.featureTypeStr);
 
     typedef std::vector<Level>::const_iterator lIt;
     for (lIt it = fld.levels.begin(); it != fld.levels.end(); ++it)
@@ -555,7 +560,7 @@ void Detector::detect(cv::InputArray _image, cv::InputArray _rois, std::vector<D
              {
                  if (m[dx])
                  {
-                     storage.offset = dy * storage.step + dx;
+                     storage.offset = (int)(dy * storage.step + dx);
                      fld.detectAt(dx, dy, level, storage, objects);
                  }
              }
@@ -570,11 +575,11 @@ void Detector::detect(InputArray _image, InputArray _rois,  OutputArray _rects, 
     std::vector<Detection> objects;
     detect( _image, _rois, objects);
 
-    _rects.create(1, objects.size(), CV_32SC4);
+    _rects.create(1, (int)objects.size(), CV_32SC4);
     cv::Mat_<cv::Rect> rects = (cv::Mat_<cv::Rect>)_rects.getMat();
     cv::Rect* rectPtr = rects.ptr<cv::Rect>(0);
 
-    _confs.create(1, objects.size(), CV_32F);
+    _confs.create(1, (int)objects.size(), CV_32F);
     cv::Mat confs = _confs.getMat();
     float* confPtr = confs.ptr<float>(0);
 

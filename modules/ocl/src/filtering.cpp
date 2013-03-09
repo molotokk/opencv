@@ -50,124 +50,8 @@
 #include "precomp.hpp"
 #include "mcwutil.hpp"
 #include <iostream>
-using namespace std;
 using namespace cv;
 using namespace cv::ocl;
-
-#if !defined (HAVE_OPENCL)
-
-Ptr<BaseFilter_GPU> cv::ocl::getBoxFilter_GPU(int, int, const Size &, Point, int)
-{
-    throw_nogpu();
-    return Ptr<BaseFilter_GPU>(0);
-}
-
-Ptr<FilterEngine_GPU> cv::ocl::createBoxFilter_GPU(int, int, const Size &, const Point &, int)
-{
-    throw_nogpu();
-    return Ptr<FilterEngine_GPU>(0);
-}
-
-Ptr<FilterEngine_GPU> cv::ocl::createFilter2D_GPU(const Ptr<BaseFilter_GPU>)
-{
-    throw_nogpu();
-    return Ptr<FilterEngine_GPU>(0);
-}
-
-Ptr<FilterEngine_GPU> cv::ocl::createSeparableLinearFilter_GPU(int, int, const Mat &, const Mat &, const Point &)
-{
-    throw_nogpu();
-    return Ptr<FilterEngine_GPU>(0);
-}
-
-Ptr<BaseRowFilter_GPU> cv::ocl::getLinearRowFilter_GPU(int, int, const Mat &, int)
-{
-    throw_nogpu();
-    return Ptr<BaseRowFilter_GPU>(0);
-}
-
-Ptr<BaseColumnFilter_GPU> cv::ocl::getLinearColumnFilter_GPU(int, int, const Mat &, int)
-{
-    throw_nogpu();
-    return Ptr<BaseColumnFilter_GPU>(0);
-}
-
-Ptr<FilterEngine_GPU> cv::ocl::createGaussianFilter_GPU(int, Size, double, double)
-{
-    throw_nogpu();
-    return Ptr<FilterEngine_GPU>(0);
-}
-
-
-Ptr<BaseFilter_GPU> cv::ocl::getLinearFilter_GPU(int, int, const Mat &, const Size &, Point)
-{
-    throw_nogpu();
-    return Ptr<BaseFilter_GPU>(0);
-}
-
-Ptr<FilterEngine_GPU> cv::ocl::createLinearFilter_GPU(int, int, const Mat &, const Point &)
-{
-    throw_nogpu();
-    return Ptr<FilterEngine_GPU>(0);
-}
-
-Ptr<FilterEngine_GPU> cv::ocl::createDerivFilter_GPU(int srcType, int dstType, int dx, int dy, int ksize, int borderType)
-{
-    throw_nogpu();
-    return Ptr<FilterEngine_GPU>(0);
-}
-
-void cv::ocl::boxFilter(const oclMat &, oclMat &, int, Size, Point, int)
-{
-    throw_nogpu();
-}
-
-void cv::ocl::sepFilter2D(const oclMat &, oclMat &, int, const Mat &, const Mat &, Point)
-{
-    throw_nogpu();
-}
-
-void cv::ocl::Sobel(const oclMat &, oclMat &, int, int, int, int, double)
-{
-    throw_nogpu();
-}
-
-void cv::ocl::Scharr(const oclMat &, oclMat &, int, int, int, double)
-{
-    throw_nogpu();
-}
-
-void cv::ocl::GaussianBlur(const oclMat &, oclMat &, Size, double, double)
-{
-    throw_nogpu();
-}
-
-void cv::ocl::filter2D(const oclMat &, oclMat &, int, const Mat &, Point)
-{
-    throw_nogpu();
-}
-
-void cv::ocl::Laplacian(const oclMat &, oclMat &, int, int, double)
-{
-    throw_nogpu();
-}
-
-void cv::ocl::erode(const oclMat &, oclMat &, const Mat &, Point, int)
-{
-    throw_nogpu();
-}
-
-void cv::ocl::dilate(const oclMat &, oclMat &, const Mat &, Point, int)
-{
-    throw_nogpu();
-}
-
-void cv::ocl::morphologyEx(const oclMat &, oclMat &, int, const Mat &, Point, int)
-{
-    throw_nogpu();
-}
-
-#else /* !defined (HAVE_OPENCL) */
 
 //helper routines
 namespace cv
@@ -352,7 +236,7 @@ static void GPUErode(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
     int srcOffset_x = srcOffset % srcStep;
     int srcOffset_y = srcOffset / srcStep;
     Context *clCxt = src.clCxt;
-    string kernelName;
+    std::string kernelName;
     size_t localThreads[3] = {16, 16, 1};
     size_t globalThreads[3] = {(src.cols + localThreads[0] - 1) / localThreads[0] *localThreads[0], (src.rows + localThreads[1] - 1) / localThreads[1] *localThreads[1], 1};
 
@@ -396,19 +280,19 @@ static void GPUErode(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
         rectKernel?"-D RECTKERNEL":"",
         useROI?"-D USEROI":"",
         s);
-    vector< pair<size_t, const void *> > args;
-    args.push_back(make_pair(sizeof(cl_mem), (void *)&src.data));
-    args.push_back(make_pair(sizeof(cl_mem), (void *)&dst.data));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&srcOffset_x));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&srcOffset_y));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.cols));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.rows));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&srcStep));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&dstStep));
-    args.push_back(make_pair(sizeof(cl_mem), (void *)&mat_kernel.data));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.wholecols));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.wholerows));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&dstOffset));
+    std::vector< std::pair<size_t, const void *> > args;
+    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&src.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&dst.data));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&srcOffset_x));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&srcOffset_y));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.cols));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.rows));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&srcStep));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dstStep));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&mat_kernel.data));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.wholecols));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.wholerows));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dstOffset));
     openCLExecuteKernel(clCxt, &filtering_morph, kernelName, globalThreads, localThreads, args, -1, -1, compile_option);
 }
 
@@ -432,7 +316,7 @@ static void GPUDilate(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
     int srcOffset_x = srcOffset % srcStep;
     int srcOffset_y = srcOffset / srcStep;
     Context *clCxt = src.clCxt;
-    string kernelName;
+    std::string kernelName;
     size_t localThreads[3] = {16, 16, 1};
     size_t globalThreads[3] = {(src.cols + localThreads[0] - 1) / localThreads[0] *localThreads[0],
                                (src.rows + localThreads[1] - 1) / localThreads[1] *localThreads[1], 1};
@@ -477,19 +361,19 @@ static void GPUDilate(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
         rectKernel?"-D RECTKERNEL":"",
         useROI?"-D USEROI":"",
         s);
-    vector< pair<size_t, const void *> > args;
-    args.push_back(make_pair(sizeof(cl_mem), (void *)&src.data));
-    args.push_back(make_pair(sizeof(cl_mem), (void *)&dst.data));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&srcOffset_x));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&srcOffset_y));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.cols));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.rows));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&srcStep));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&dstStep));
-    args.push_back(make_pair(sizeof(cl_mem), (void *)&mat_kernel.data));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.wholecols));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.wholerows));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&dstOffset));
+    std::vector< std::pair<size_t, const void *> > args;
+    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&src.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&dst.data));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&srcOffset_x));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&srcOffset_y));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.cols));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.rows));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&srcStep));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dstStep));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&mat_kernel.data));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.wholecols));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.wholerows));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dstOffset));
     openCLExecuteKernel(clCxt, &filtering_morph, kernelName, globalThreads, localThreads, args, -1, -1, compile_option);
 }
 
@@ -725,7 +609,7 @@ static void GPUFilter2D(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
     int cn =  src.oclchannels();
     int depth = src.depth();
 
-    string kernelName = "filter2D";
+    std::string kernelName = "filter2D";
 
     size_t src_offset_x = (src.offset % src.step) / src.elemSize();
     size_t src_offset_y = src.offset / src.step;
@@ -749,21 +633,21 @@ static void GPUFilter2D(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
                                 divUp(rows, localThreads[1]) *localThreads[1], 1
                               };
 
-    vector< pair<size_t, const void *> > args;
-    args.push_back(make_pair(sizeof(cl_mem), (void *)&src.data));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.step));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src_offset_x));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src_offset_y));
-    args.push_back(make_pair(sizeof(cl_mem), (void *)&dst.data));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&dst.step));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&dst_offset_x));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&dst_offset_y));
-    args.push_back(make_pair(sizeof(cl_mem), (void *)&mat_kernel.data));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.cols));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.rows));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&cols));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.wholecols));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.wholerows));
+    std::vector< std::pair<size_t, const void *> > args;
+    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&src.data));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.step));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src_offset_x));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src_offset_y));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&dst.data));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst.step));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst_offset_x));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst_offset_y));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&mat_kernel.data));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.cols));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.rows));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&cols));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.wholecols));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.wholerows));
 
     openCLExecuteKernel(clCxt, &filtering_laplacian, kernelName, globalThreads, localThreads, args, cn, depth);
 }
@@ -881,7 +765,7 @@ static void GPUFilterBox_8u_C1R(const oclMat &src, oclMat &dst,
               (src.rows == dst.rows));
     Context *clCxt = src.clCxt;
 
-    string kernelName = "boxFilter_C1_D0";
+    std::string kernelName = "boxFilter_C1_D0";
 
     char btype[30];
 
@@ -916,18 +800,18 @@ static void GPUFilterBox_8u_C1R(const oclMat &src, oclMat &dst,
     size_t globalThreads[3] = { globalSizeX, globalSizeY, 1 };
     size_t localThreads[3]  = { blockSizeX, blockSizeY, 1 };
 
-    vector<pair<size_t , const void *> > args;
-    args.push_back(make_pair(sizeof(cl_mem), &src.data));
-    args.push_back(make_pair(sizeof(cl_mem), &dst.data));
-    args.push_back(make_pair(sizeof(cl_float), (void *)&alpha));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.offset));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.wholerows));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.wholecols));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.step));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&dst.offset));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&dst.rows));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&dst.cols));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&dst.step));
+    std::vector<std::pair<size_t , const void *> > args;
+    args.push_back(std::make_pair(sizeof(cl_mem), &src.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), &dst.data));
+    args.push_back(std::make_pair(sizeof(cl_float), (void *)&alpha));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.offset));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.wholerows));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.wholecols));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.step));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst.offset));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst.rows));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst.cols));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst.step));
 
     openCLExecuteKernel(clCxt, &filtering_boxFilter, kernelName, globalThreads, localThreads, args, -1, -1, build_options);
 }
@@ -943,7 +827,7 @@ static void GPUFilterBox_8u_C4R(const oclMat &src, oclMat &dst,
               (src.rows == dst.rows));
     Context *clCxt = src.clCxt;
 
-    string kernelName = "boxFilter_C4_D0";
+    std::string kernelName = "boxFilter_C4_D0";
 
     char btype[30];
 
@@ -978,18 +862,18 @@ static void GPUFilterBox_8u_C4R(const oclMat &src, oclMat &dst,
     size_t globalThreads[3] = { globalSizeX, globalSizeY, 1};
     size_t localThreads[3]  = { blockSizeX, blockSizeY, 1};
 
-    vector<pair<size_t , const void *> > args;
-    args.push_back(make_pair(sizeof(cl_mem), &src.data));
-    args.push_back(make_pair(sizeof(cl_mem), &dst.data));
-    args.push_back(make_pair(sizeof(cl_float), (void *)&alpha));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.offset));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.wholerows));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.wholecols));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.step));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&dst.offset));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&dst.rows));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&dst.cols));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&dst.step));
+    std::vector<std::pair<size_t , const void *> > args;
+    args.push_back(std::make_pair(sizeof(cl_mem), &src.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), &dst.data));
+    args.push_back(std::make_pair(sizeof(cl_float), (void *)&alpha));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.offset));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.wholerows));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.wholecols));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.step));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst.offset));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst.rows));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst.cols));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst.step));
 
     openCLExecuteKernel(clCxt, &filtering_boxFilter, kernelName, globalThreads, localThreads, args, -1, -1, build_options);
 }
@@ -1005,7 +889,7 @@ static void GPUFilterBox_32F_C1R(const oclMat &src, oclMat &dst,
               (src.rows == dst.rows));
     Context *clCxt = src.clCxt;
 
-    string kernelName = "boxFilter_C1_D5";
+    std::string kernelName = "boxFilter_C1_D5";
 
     char btype[30];
 
@@ -1041,18 +925,18 @@ static void GPUFilterBox_32F_C1R(const oclMat &src, oclMat &dst,
     size_t globalThreads[3] = { globalSizeX, globalSizeY, 1};
     size_t localThreads[3]  = { blockSizeX, blockSizeY, 1};
 
-    vector<pair<size_t , const void *> > args;
-    args.push_back(make_pair(sizeof(cl_mem), &src.data));
-    args.push_back(make_pair(sizeof(cl_mem), &dst.data));
-    args.push_back(make_pair(sizeof(cl_float), (void *)&alpha));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.offset));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.wholerows));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.wholecols));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.step));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&dst.offset));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&dst.rows));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&dst.cols));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&dst.step));
+    std::vector<std::pair<size_t , const void *> > args;
+    args.push_back(std::make_pair(sizeof(cl_mem), &src.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), &dst.data));
+    args.push_back(std::make_pair(sizeof(cl_float), (void *)&alpha));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.offset));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.wholerows));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.wholecols));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.step));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst.offset));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst.rows));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst.cols));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst.step));
 
     openCLExecuteKernel(clCxt, &filtering_boxFilter, kernelName, globalThreads, localThreads, args, -1, -1, build_options);
 }
@@ -1068,7 +952,7 @@ static void GPUFilterBox_32F_C4R(const oclMat &src, oclMat &dst,
               (src.rows == dst.rows));
     Context *clCxt = src.clCxt;
 
-    string kernelName = "boxFilter_C4_D5";
+    std::string kernelName = "boxFilter_C4_D5";
 
     char btype[30];
 
@@ -1104,18 +988,18 @@ static void GPUFilterBox_32F_C4R(const oclMat &src, oclMat &dst,
     size_t globalThreads[3] = { globalSizeX, globalSizeY, 1};
     size_t localThreads[3]  = { blockSizeX, blockSizeY, 1};
 
-    vector<pair<size_t , const void *> > args;
-    args.push_back(make_pair(sizeof(cl_mem), &src.data));
-    args.push_back(make_pair(sizeof(cl_mem), &dst.data));
-    args.push_back(make_pair(sizeof(cl_float), (void *)&alpha));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.offset));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.wholerows));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.wholecols));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.step));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&dst.offset));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&dst.rows));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&dst.cols));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&dst.step));
+    std::vector<std::pair<size_t , const void *> > args;
+    args.push_back(std::make_pair(sizeof(cl_mem), &src.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), &dst.data));
+    args.push_back(std::make_pair(sizeof(cl_float), (void *)&alpha));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.offset));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.wholerows));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.wholecols));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.step));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst.offset));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst.rows));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst.cols));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst.step));
 
     openCLExecuteKernel(clCxt, &filtering_boxFilter, kernelName, globalThreads, localThreads, args, -1, -1, build_options);
 }
@@ -1214,7 +1098,7 @@ void linearRowFilter_gpu(const oclMat &src, const oclMat &dst, oclMat mat_kernel
     int channels = src.oclchannels();
 
     size_t localThreads[3] = {16, 16, 1};
-    string kernelName = "row_filter";
+    std::string kernelName = "row_filter";
 
     char btype[30];
 
@@ -1278,19 +1162,19 @@ void linearRowFilter_gpu(const oclMat &src, const oclMat &dst, oclMat mat_kernel
     dst_pix_per_row = dst.step / dst.elemSize();
     //dst_offset_in_pixel = dst.offset / dst.elemSize();
     int ridusy = (dst.rows - src.rows) >> 1;
-    vector<pair<size_t , const void *> > args;
-    args.push_back(make_pair(sizeof(cl_mem), &src.data));
-    args.push_back(make_pair(sizeof(cl_mem), &dst.data));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&dst.cols));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&dst.rows));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.wholecols));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.wholerows));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src_pix_per_row));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src_offset_x));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src_offset_y));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&dst_pix_per_row));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&ridusy));
-    args.push_back(make_pair(sizeof(cl_mem), (void *)&mat_kernel.data));
+    std::vector<std::pair<size_t , const void *> > args;
+    args.push_back(std::make_pair(sizeof(cl_mem), &src.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), &dst.data));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst.cols));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst.rows));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.wholecols));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.wholerows));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src_pix_per_row));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src_offset_x));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src_offset_y));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst_pix_per_row));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&ridusy));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&mat_kernel.data));
 
     openCLExecuteKernel2(clCxt, &filter_sep_row, kernelName, globalThreads, localThreads, args, channels, src.depth(), compile_option, CLFLUSH);
 }
@@ -1346,7 +1230,7 @@ void linearColumnFilter_gpu(const oclMat &src, const oclMat &dst, oclMat mat_ker
     int channels = src.oclchannels();
 
     size_t localThreads[3] = {16, 16, 1};
-    string kernelName = "col_filter";
+    std::string kernelName = "col_filter";
 
     char btype[30];
 
@@ -1439,19 +1323,19 @@ void linearColumnFilter_gpu(const oclMat &src, const oclMat &dst, oclMat mat_ker
     dst_pix_per_row = dst.step / dst.elemSize();
     dst_offset_in_pixel = dst.offset / dst.elemSize();
 
-    vector<pair<size_t , const void *> > args;
-    args.push_back(make_pair(sizeof(cl_mem), &src.data));
-    args.push_back(make_pair(sizeof(cl_mem), &dst.data));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&dst.cols));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&dst.rows));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.wholecols));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src.wholerows));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&src_pix_per_row));
-    //args.push_back(make_pair(sizeof(cl_int),(void*)&src_offset_x));
-    //args.push_back(make_pair(sizeof(cl_int),(void*)&src_offset_y));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&dst_pix_per_row));
-    args.push_back(make_pair(sizeof(cl_int), (void *)&dst_offset_in_pixel));
-    args.push_back(make_pair(sizeof(cl_mem), (void *)&mat_kernel.data));
+    std::vector<std::pair<size_t , const void *> > args;
+    args.push_back(std::make_pair(sizeof(cl_mem), &src.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), &dst.data));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst.cols));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst.rows));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.wholecols));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.wholerows));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src_pix_per_row));
+    //args.push_back(std::make_pair(sizeof(cl_int),(void*)&src_offset_x));
+    //args.push_back(std::make_pair(sizeof(cl_int),(void*)&src_offset_y));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst_pix_per_row));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst_offset_in_pixel));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&mat_kernel.data));
 
     openCLExecuteKernel(clCxt, &filter_sep_col, kernelName, globalThreads, localThreads, args, -1, -1, compile_option);
 }
@@ -1705,5 +1589,3 @@ void cv::ocl::GaussianBlur(const oclMat &src, oclMat &dst, Size ksize, double si
     Ptr<FilterEngine_GPU> f = createGaussianFilter_GPU(src.type(), ksize, sigma1, sigma2, bordertype);
     f->apply(src, dst);
 }
-
-#endif /* !defined (HAVE_OPENCL) */

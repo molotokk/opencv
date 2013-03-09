@@ -44,7 +44,7 @@
 
 using namespace cv;
 
-Ptr<Feature2D> Feature2D::create( const string& feature2DType )
+Ptr<Feature2D> Feature2D::create( const std::string& feature2DType )
 {
     return Algorithm::create<Feature2D>("Feature2D." + feature2DType);
 }
@@ -122,6 +122,26 @@ CV_INIT_ALGORITHM(GFTTDetector, "Feature2D.GFTT",
                   obj.info()->addParam(obj, "minDistance", obj.minDistance);
                   obj.info()->addParam(obj, "useHarrisDetector", obj.useHarrisDetector);
                   obj.info()->addParam(obj, "k", obj.k));
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+CV_INIT_ALGORITHM(SimpleBlobDetector, "Feature2D.SimpleBlob",
+                  obj.info()->addParam(obj, "thresholdStep",    obj.params.thresholdStep);
+                  obj.info()->addParam(obj, "minThreshold",     obj.params.minThreshold);
+                  obj.info()->addParam(obj, "maxThreshold",     obj.params.maxThreshold);
+                  obj.info()->addParam_(obj, "minRepeatability", (sizeof(size_t) == sizeof(uint64))?Param::UINT64 : Param::UNSIGNED_INT, &obj.params.minRepeatability, false, 0, 0);
+                  obj.info()->addParam(obj, "minDistBetweenBlobs", obj.params.minDistBetweenBlobs);
+                  obj.info()->addParam(obj, "filterByColor",    obj.params.filterByColor);
+                  obj.info()->addParam(obj, "blobColor",        obj.params.blobColor);
+                  obj.info()->addParam(obj, "filterByArea",     obj.params.filterByArea);
+                  obj.info()->addParam(obj, "maxArea",          obj.params.maxArea);
+                  obj.info()->addParam(obj, "filterByCircularity", obj.params.filterByCircularity);
+                  obj.info()->addParam(obj, "maxCircularity",   obj.params.maxCircularity);
+                  obj.info()->addParam(obj, "filterByInertia",  obj.params.filterByInertia);
+                  obj.info()->addParam(obj, "maxInertiaRatio",  obj.params.maxInertiaRatio);
+                  obj.info()->addParam(obj, "filterByConvexity", obj.params.filterByConvexity);
+                  obj.info()->addParam(obj, "maxConvexity",     obj.params.maxConvexity);
+                  );
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 

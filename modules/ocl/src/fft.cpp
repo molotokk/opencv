@@ -47,18 +47,16 @@
 
 using namespace cv;
 using namespace cv::ocl;
-using namespace std;
 
-#if !defined HAVE_OPENCL
-void cv::ocl::dft(const oclMat &, oclMat &, Size , int )
-{
-    throw_nogpu();
-}
-#elif !defined HAVE_CLAMDFFT
+#if !defined HAVE_CLAMDFFT
 void cv::ocl::dft(const oclMat&, oclMat&, Size, int)
 {
     CV_Error(CV_StsNotImplemented, "OpenCL DFT is not implemented");
 }
+namespace cv { namespace ocl {
+    void fft_teardown();
+}}
+void cv::ocl::fft_teardown(){}
 #else
 #include "clAmdFft.h"
 namespace cv
@@ -93,11 +91,11 @@ namespace cv
         protected:
             PlanCache();
             ~PlanCache();
-            friend class auto_ptr<PlanCache>;
-            static auto_ptr<PlanCache> planCache;
+            friend class std::auto_ptr<PlanCache>;
+            static std::auto_ptr<PlanCache> planCache;
 
             bool started;
-            vector<FftPlan *> planStore;
+            std::vector<FftPlan *> planStore;
             clAmdFftSetupData *setupData;
         public:
             friend void fft_setup();
@@ -121,7 +119,7 @@ namespace cv
         };
     }
 }
-auto_ptr<PlanCache> PlanCache::planCache;
+std::auto_ptr<PlanCache> PlanCache::planCache;
 
 void cv::ocl::fft_setup()
 {
@@ -199,8 +197,8 @@ cv::ocl::FftPlan::FftPlan(Size _dft_size, int _src_step, int _dst_step, int _fla
         break;
     default:
         //std::runtime_error("does not support this convertion!");
-        cout << "Does not support this convertion!" << endl;
-        throw exception();
+        std::cout << "Does not support this convertion!" << std::endl;
+        throw std::exception();
         break;
     }
 
@@ -230,7 +228,7 @@ cv::ocl::FftPlan::~FftPlan()
 
 cv::ocl::PlanCache::PlanCache()
     : started(false),
-      planStore(vector<cv::ocl::FftPlan *>()),
+      planStore(std::vector<cv::ocl::FftPlan *>()),
       setupData(NULL)
 {
 }
@@ -243,7 +241,7 @@ cv::ocl::PlanCache::~PlanCache()
 FftPlan* cv::ocl::PlanCache::getPlan(Size _dft_size, int _src_step, int _dst_step, int _flags, FftType _type)
 {
     PlanCache& pCache = *PlanCache::getPlanCache();
-    vector<FftPlan *>& pStore = pCache.planStore;
+    std::vector<FftPlan *>& pStore = pCache.planStore;
     // go through search
     for(size_t i = 0; i < pStore.size(); i ++)
     {
@@ -269,7 +267,7 @@ FftPlan* cv::ocl::PlanCache::getPlan(Size _dft_size, int _src_step, int _dst_ste
 bool cv::ocl::PlanCache::removePlan(clAmdFftPlanHandle plHandle)
 {
     PlanCache& pCache = *PlanCache::getPlanCache();
-    vector<FftPlan *>& pStore = pCache.planStore;
+    std::vector<FftPlan *>& pStore = pCache.planStore;
     for(size_t i = 0; i < pStore.size(); i ++)
     {
         if(pStore[i]->getPlanHandle() == plHandle)
@@ -323,8 +321,8 @@ void cv::ocl::dft(const oclMat &src, oclMat &dst, Size dft_size, int flags)
         break;
     default:
         //std::runtime_error("does not support this convertion!");
-        cout << "Does not support this convertion!" << endl;
-        throw exception();
+        std::cout << "Does not support this convertion!" << std::endl;
+        throw std::exception();
         break;
     }
     clAmdFftPlanHandle plHandle = PlanCache::getPlan(dft_size, src.step, dst.step, flags, type)->getPlanHandle();

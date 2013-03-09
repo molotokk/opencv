@@ -56,7 +56,6 @@ namespace cv
 {
     namespace ocl
     {
-        using std::auto_ptr;
         enum
         {
             CVCL_DEVICE_TYPE_DEFAULT     = (1 << 0),
@@ -66,6 +65,32 @@ namespace cv
             //CVCL_DEVICE_TYPE_CUSTOM      = (1 << 4)
             CVCL_DEVICE_TYPE_ALL         = 0xFFFFFFFF
         };
+
+        enum DevMemRW
+        {
+            DEVICE_MEM_R_W = 0,
+            DEVICE_MEM_R_ONLY,
+            DEVICE_MEM_W_ONLY
+        };
+
+        enum DevMemType
+        {
+            DEVICE_MEM_DEFAULT = 0,
+            DEVICE_MEM_AHP,         //alloc host pointer
+            DEVICE_MEM_UHP,         //use host pointer
+            DEVICE_MEM_CHP,         //copy host pointer
+            DEVICE_MEM_PM           //persistent memory
+        };
+
+        //Get the global device memory and read/write type
+        //return 1 if unified memory system supported, otherwise return 0
+        CV_EXPORTS int getDevMemType(DevMemRW& rw_type, DevMemType& mem_type);
+
+        //Set the global device memory and read/write type,
+        //the newly generated oclMat will all use this type
+        //return -1 if the target type is unsupported, otherwise return 0
+        CV_EXPORTS int setDevMemType(DevMemRW rw_type = DEVICE_MEM_R_W, DevMemType mem_type = DEVICE_MEM_DEFAULT);
+
         //this class contains ocl runtime information
         class CV_EXPORTS Info
         {
@@ -78,7 +103,7 @@ namespace cv
             ~Info();
             void release();
             Info &operator = (const Info &m);
-            std::vector<string> DeviceName;
+            std::vector<std::string> DeviceName;
         };
         //////////////////////////////// Initialization & Info ////////////////////////
         //this function may be obsoleted
@@ -102,7 +127,7 @@ namespace cv
 
         //this function enable ocl module to use customized cl_context and cl_command_queue
         //getDevice also need to be called before this function
-        CV_EXPORTS void setDeviceEx(Info &oclinfo, void *ctx, void *qu, int devnum = 0); 
+        CV_EXPORTS void setDeviceEx(Info &oclinfo, void *ctx, void *qu, int devnum = 0);
 
         //////////////////////////////// Error handling ////////////////////////
         CV_EXPORTS void error(const char *error_string, const char *file, const int line, const char *func);
@@ -113,8 +138,8 @@ namespace cv
         {
         protected:
             Context();
-            friend class auto_ptr<Context>;
-            static auto_ptr<Context> clCxt;
+            friend class std::auto_ptr<Context>;
+            static std::auto_ptr<Context> clCxt;
 
         public:
             ~Context();
@@ -125,6 +150,25 @@ namespace cv
             Impl *impl;
         };
 
+        //! Calls a kernel, by string. Pass globalThreads = NULL, and cleanUp = true, to finally clean-up without executing.
+        CV_EXPORTS double openCLExecuteKernelInterop(Context *clCxt ,
+                                                        const char **source, std::string kernelName,
+                                                        size_t globalThreads[3], size_t localThreads[3],
+                                                        std::vector< std::pair<size_t, const void *> > &args,
+                                                        int channels, int depth, const char *build_options,
+                                                        bool finish = true, bool measureKernelTime = false,
+                                                        bool cleanUp = true);
+
+        //! Calls a kernel, by file. Pass globalThreads = NULL, and cleanUp = true, to finally clean-up without executing.
+        CV_EXPORTS double openCLExecuteKernelInterop(Context *clCxt ,
+                                                        const char **fileName, const int numFiles, std::string kernelName,
+                                                        size_t globalThreads[3], size_t localThreads[3],
+                                                        std::vector< std::pair<size_t, const void *> > &args,
+                                                        int channels, int depth, const char *build_options,
+                                                        bool finish = true, bool measureKernelTime = false,
+                                                        bool cleanUp = true);
+
+        class CV_EXPORTS oclMatExpr;
         //////////////////////////////// oclMat ////////////////////////////////
         class CV_EXPORTS oclMat
         {
@@ -158,7 +202,7 @@ namespace cv
             oclMat &operator = (const oclMat &m);
             //! assignment operator. Perfom blocking upload to device.
             oclMat &operator = (const Mat &m);
-
+            oclMat &operator = (const oclMatExpr& expr);
 
             //! pefroms blocking upload data to oclMat.
             void upload(const cv::Mat &m);
@@ -209,6 +253,11 @@ namespace cv
             // previous data is unreferenced if needed.
             void create(int rows, int cols, int type);
             void create(Size size, int type);
+
+            //! allocates new oclMatrix with specified device memory type.
+            void createEx(int rows, int cols, int type, DevMemRW rw_type, DevMemType mem_type);
+            void createEx(Size size, int type, DevMemRW rw_type, DevMemType mem_type);
+
             //! decreases reference counter;
             // deallocate the data when reference counter reaches 0.
             void release();
@@ -224,6 +273,11 @@ namespace cv
             // (this is a generalized form of row, rowRange etc.)
             oclMat operator()( Range rowRange, Range colRange ) const;
             oclMat operator()( const Rect &roi ) const;
+
+            oclMat& operator+=( const oclMat& m );
+            oclMat& operator-=( const oclMat& m );
+            oclMat& operator*=( const oclMat& m );
+            oclMat& operator/=( const oclMat& m );
 
             //! returns true if the oclMatrix data is continuous
             // (i.e. when there are no gaps between successive rows).
@@ -297,16 +351,17 @@ namespace cv
             int wholecols;
         };
 
+
         ///////////////////// mat split and merge /////////////////////////////////
         //! Compose a multi-channel array from several single-channel arrays
         // Support all types
         CV_EXPORTS void merge(const oclMat *src, size_t n, oclMat &dst);
-        CV_EXPORTS void merge(const vector<oclMat> &src, oclMat &dst);
+        CV_EXPORTS void merge(const std::vector<oclMat> &src, oclMat &dst);
 
         //! Divides multi-channel array into several single-channel arrays
         // Support all types
         CV_EXPORTS void split(const oclMat &src, oclMat *dst);
-        CV_EXPORTS void split(const oclMat &src, vector<oclMat> &dst);
+        CV_EXPORTS void split(const oclMat &src, std::vector<oclMat> &dst);
 
         ////////////////////////////// Arithmetics ///////////////////////////////////
         //#if defined DOUBLE_SUPPORT
@@ -460,18 +515,24 @@ namespace cv
         // supports all types
         CV_EXPORTS void bitwise_xor(const oclMat &src1, const oclMat &src2, oclMat &dst, const oclMat &mask = oclMat());
         CV_EXPORTS void bitwise_xor(const oclMat &src1, const Scalar &s, oclMat &dst, const oclMat &mask = oclMat());
-        //! computes convolution of two images
-
-        //! support only CV_32FC1 type
-
-        CV_EXPORTS void convolve(const oclMat &image, const oclMat &temp1, oclMat &result);
-
 
         //! Logical operators
-        CV_EXPORTS oclMat operator ~ (const oclMat &src);
-        CV_EXPORTS oclMat operator | (const oclMat &src1, const oclMat &src2);
-        CV_EXPORTS oclMat operator & (const oclMat &src1, const oclMat &src2);
-        CV_EXPORTS oclMat operator ^ (const oclMat &src1, const oclMat &src2);
+        CV_EXPORTS oclMat operator ~ (const oclMat &);
+        CV_EXPORTS oclMat operator | (const oclMat &, const oclMat &);
+        CV_EXPORTS oclMat operator & (const oclMat &, const oclMat &);
+        CV_EXPORTS oclMat operator ^ (const oclMat &, const oclMat &);
+
+
+        //! Mathematics operators
+        CV_EXPORTS oclMatExpr operator + (const oclMat &src1, const oclMat &src2);
+        CV_EXPORTS oclMatExpr operator - (const oclMat &src1, const oclMat &src2);
+        CV_EXPORTS oclMatExpr operator * (const oclMat &src1, const oclMat &src2);
+        CV_EXPORTS oclMatExpr operator / (const oclMat &src1, const oclMat &src2);
+
+        //! computes convolution of two images
+        //! support only CV_32FC1 type
+        CV_EXPORTS void convolve(const oclMat &image, const oclMat &temp1, oclMat &result);
+
         CV_EXPORTS void cvtColor(const oclMat &src, oclMat &dst, int code , int dcn = 0);
 
         //////////////////////////////// Filter Engine ////////////////////////////////
@@ -848,7 +909,7 @@ namespace cv
         CV_EXPORTS void HoughCircles(const oclMat& src, oclMat& circles, HoughCirclesBuf& buf, int method, float dp, float minDist, int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles = 4096);
         CV_EXPORTS void HoughCirclesDownload(const oclMat& d_circles, OutputArray h_circles);
 
-    
+
         ///////////////////////////////////////// clAmdFft related /////////////////////////////////////////
         //! Performs a forward or inverse discrete Fourier transform (1D or 2D) of floating point matrix.
         //! Param dft_size is the size of DFT transform.
@@ -902,19 +963,19 @@ namespace cv
 
 
 
-            void setSVMDetector(const vector<float> &detector);
+            void setSVMDetector(const std::vector<float> &detector);
 
 
 
-            static vector<float> getDefaultPeopleDetector();
+            static std::vector<float> getDefaultPeopleDetector();
 
-            static vector<float> getPeopleDetector48x96();
+            static std::vector<float> getPeopleDetector48x96();
 
-            static vector<float> getPeopleDetector64x128();
+            static std::vector<float> getPeopleDetector64x128();
 
 
 
-            void detect(const oclMat &img, vector<Point> &found_locations,
+            void detect(const oclMat &img, std::vector<Point> &found_locations,
 
                         double hit_threshold = 0, Size win_stride = Size(),
 
@@ -922,7 +983,7 @@ namespace cv
 
 
 
-            void detectMultiScale(const oclMat &img, vector<Rect> &found_locations,
+            void detectMultiScale(const oclMat &img, std::vector<Rect> &found_locations,
 
                                   double hit_threshold = 0, Size win_stride = Size(),
 
@@ -1081,17 +1142,17 @@ namespace cv
 
             //! upload host keypoints to device memory
 
-            void uploadKeypoints(const vector<cv::KeyPoint> &keypoints, oclMat &keypointsocl);
+            void uploadKeypoints(const std::vector<cv::KeyPoint> &keypoints, oclMat &keypointsocl);
 
             //! download keypoints from device to host memory
 
-            void downloadKeypoints(const oclMat &keypointsocl, vector<KeyPoint> &keypoints);
+            void downloadKeypoints(const oclMat &keypointsocl, std::vector<KeyPoint> &keypoints);
 
 
 
             //! download descriptors from device to host memory
 
-            void downloadDescriptors(const oclMat &descriptorsocl, vector<float> &descriptors);
+            void downloadDescriptors(const oclMat &descriptorsocl, std::vector<float> &descriptors);
 
 
 
@@ -1233,7 +1294,7 @@ namespace cv
 
             ResultType operator()( const T *a, const T *b, int size ) const
             {
-                return (ResultType)sqrt((double)normL2Sqr<ValueType, ResultType>(a, b, size));
+                return (ResultType)std::sqrt((double)normL2Sqr<ValueType, ResultType>(a, b, size));
             }
         };
 
@@ -1694,7 +1755,7 @@ namespace cv
 
 
 
-            void buildImagePyramid(const oclMat &img0, vector<oclMat> &pyr, bool withBorder);
+            void buildImagePyramid(const oclMat &img0, std::vector<oclMat> &pyr, bool withBorder);
 
 
 
@@ -1704,9 +1765,9 @@ namespace cv
 
 
 
-            vector<oclMat> prevPyr_;
+            std::vector<oclMat> prevPyr_;
 
-            vector<oclMat> nextPyr_;
+            std::vector<oclMat> nextPyr_;
 
 
 
@@ -1758,6 +1819,8 @@ namespace cv
                                           const oclMat &bu, const oclMat &bv,
                                           float pos, oclMat &newFrame, oclMat &buf);
 
+        //! computes moments of the rasterized shape or a vector of points
+        CV_EXPORTS Moments ocl_moments(InputArray _array, bool binaryImage);
     }
 }
 #if defined _MSC_VER && _MSC_VER >= 1200

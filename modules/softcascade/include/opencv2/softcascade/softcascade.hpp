@@ -87,7 +87,7 @@ public:
     virtual void write( cv::FileStorage& fs, int index) const = 0;
     virtual ~FeaturePool();
 
-    static cv::Ptr<FeaturePool> create(const cv::Size& model, int nfeatures);
+    static cv::Ptr<FeaturePool> create(const cv::Size& model, int nfeatures, int nchannels );
 };
 
 // ========================================================================== //
@@ -126,9 +126,12 @@ public:
     virtual ~ChannelFeatureBuilder();
 
     // apply channels to source frame
-    CV_WRAP_AS(compute) virtual void operator()(InputArray src, CV_OUT OutputArray channels) const = 0;
+    CV_WRAP_AS(compute) virtual void operator()(InputArray src, CV_OUT OutputArray channels, cv::Size channelsSize = cv::Size()) const = 0;
 
-    CV_WRAP static cv::Ptr<ChannelFeatureBuilder> create();
+    CV_WRAP virtual int totalChannels() const = 0;
+    virtual cv::AlgorithmInfo* info() const = 0;
+
+    CV_WRAP static cv::Ptr<ChannelFeatureBuilder> create(const std::string& featureType);
 };
 
 // ========================================================================== //
@@ -199,12 +202,12 @@ public:
 
     virtual ~Octave();
     static cv::Ptr<Octave> create(cv::Rect boundingBox, int npositives, int nnegatives,
-        int logScale, int shrinkage, int poolSize);
+        int logScale, int shrinkage, cv::Ptr<ChannelFeatureBuilder> builder);
 
     virtual bool train(const Dataset* dataset, const FeaturePool* pool, int weaks, int treeDepth) = 0;
     virtual void setRejectThresholds(OutputArray thresholds) = 0;
     virtual void write( cv::FileStorage &fs, const FeaturePool* pool, InputArray thresholds) const = 0;
-    virtual void write( CvFileStorage* fs, string name) const = 0;
+    virtual void write( CvFileStorage* fs, std::string name) const = 0;
 };
 
 CV_EXPORTS bool initModule_softcascade(void);

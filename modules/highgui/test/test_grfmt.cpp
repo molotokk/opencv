@@ -99,11 +99,14 @@ public:
                 {
                     if(ext_from_int(ext).empty())
                         continue;
-                    for (int num_channels = 1; num_channels <= 3; num_channels+=2)
+                    for (int num_channels = 1; num_channels <= 4; num_channels++)
                     {
+                        if (num_channels == 2) continue;
+                        if (num_channels == 4 && ext!=3 /*TIFF*/) continue;
+
                         ts->printf(ts->LOG, "image type depth:%d   channels:%d   ext: %s\n", CV_8U, num_channels, ext_from_int(ext).c_str());
                         Mat img(img_r * k, img_c * k, CV_MAKETYPE(CV_8U, num_channels), Scalar::all(0));
-                        circle(img, Point2i((img_c * k) / 2, (img_r * k) / 2), cv::min((img_r * k), (img_c * k)) / 4 , Scalar::all(255));
+                        circle(img, Point2i((img_c * k) / 2, (img_r * k) / 2), std::min((img_r * k), (img_c * k)) / 4 , Scalar::all(255));
 
                         string img_path = cv::tempfile(ext_from_int(ext).c_str());
                         ts->printf(ts->LOG, "writing      image : %s\n", img_path.c_str());
@@ -116,6 +119,7 @@ public:
 
                         CV_Assert(img.size() == img_test.size());
                         CV_Assert(img.type() == img_test.type());
+                        CV_Assert(num_channels == img_test.channels());
 
                         double n = norm(img, img_test);
                         if ( n > 1.0)
@@ -132,7 +136,7 @@ public:
                     // jpeg
                     ts->printf(ts->LOG, "image type depth:%d   channels:%d   ext: %s\n", CV_8U, num_channels, ".jpg");
                     Mat img(img_r * k, img_c * k, CV_MAKETYPE(CV_8U, num_channels), Scalar::all(0));
-                    circle(img, Point2i((img_c * k) / 2, (img_r * k) / 2), cv::min((img_r * k), (img_c * k)) / 4 , Scalar::all(255));
+                    circle(img, Point2i((img_c * k) / 2, (img_r * k) / 2), std::min((img_r * k), (img_c * k)) / 4 , Scalar::all(255));
 
                     string filename = cv::tempfile(".jpg");
                     imwrite(filename, img);
@@ -162,7 +166,7 @@ public:
                     // tiff
                     ts->printf(ts->LOG, "image type depth:%d   channels:%d   ext: %s\n", CV_16U, num_channels, ".tiff");
                     Mat img(img_r * k, img_c * k, CV_MAKETYPE(CV_16U, num_channels), Scalar::all(0));
-                    circle(img, Point2i((img_c * k) / 2, (img_r * k) / 2), cv::min((img_r * k), (img_c * k)) / 4 , Scalar::all(255));
+                    circle(img, Point2i((img_c * k) / 2, (img_r * k) / 2), std::min((img_r * k), (img_c * k)) / 4 , Scalar::all(255));
 
                     string filename = cv::tempfile(".tiff");
                     imwrite(filename, img);

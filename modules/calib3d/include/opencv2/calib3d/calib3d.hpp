@@ -234,6 +234,9 @@ CVAPI(void) cvDrawChessboardCorners( CvArr* image, CvSize pattern_size,
 #define CV_CALIB_FIX_K5  4096
 #define CV_CALIB_FIX_K6  8192
 #define CV_CALIB_RATIONAL_MODEL 16384
+#define CV_CALIB_THIN_PRISM_MODEL 32768
+#define CV_CALIB_FIX_S1_S2_S3_S4  65536
+
 
 /* Finds intrinsic and extrinsic camera parameters
    from a few views of known calibration pattern */
@@ -534,6 +537,8 @@ enum
     CALIB_FIX_K5 = CV_CALIB_FIX_K5,
     CALIB_FIX_K6 = CV_CALIB_FIX_K6,
     CALIB_RATIONAL_MODEL = CV_CALIB_RATIONAL_MODEL,
+    CALIB_THIN_PRISM_MODEL = CV_CALIB_THIN_PRISM_MODEL,
+    CALIB_FIX_S1_S2_S3_S4=CV_CALIB_FIX_S1_S2_S3_S4,
     // only for stereo
     CALIB_FIX_INTRINSIC = CV_CALIB_FIX_INTRINSIC,
     CALIB_SAME_FOCAL_LENGTH = CV_CALIB_SAME_FOCAL_LENGTH,
@@ -664,18 +669,32 @@ CV_EXPORTS_W void triangulatePoints( InputArray projMatr1, InputArray projMatr2,
 CV_EXPORTS_W void correctMatches( InputArray F, InputArray points1, InputArray points2,
                                   OutputArray newPoints1, OutputArray newPoints2 );
 
+
+class CV_EXPORTS_W StereoMatcher : public Algorithm
+{
+public:
+    CV_WRAP virtual void compute( InputArray left, InputArray right,
+                                  OutputArray disparity ) = 0;
+};
+
+enum { STEREO_DISP_SCALE=16, STEREO_PREFILTER_NORMALIZED_RESPONSE = 0, STEREO_PREFILTER_XSOBEL = 1 };
+
+CV_EXPORTS Ptr<StereoMatcher> createStereoBM(int numDisparities=0, int SADWindowSize=21);
+    
+CV_EXPORTS Ptr<StereoMatcher> createStereoSGBM(int minDisparity, int numDisparities, int SADWindowSize,
+                                               int P1=0, int P2=0, int disp12MaxDiff=0,
+                                               int preFilterCap=0, int uniquenessRatio=0,
+                                               int speckleWindowSize=0, int speckleRange=0,
+                                               bool fullDP=false);
+
 template<> CV_EXPORTS void Ptr<CvStereoBMState>::delete_obj();
 
-/*!
- Block Matching Stereo Correspondence Algorithm
-
- The class implements BM stereo correspondence algorithm by K. Konolige.
-*/
+// to be moved to "compat" module
 class CV_EXPORTS_W StereoBM
 {
 public:
     enum { PREFILTER_NORMALIZED_RESPONSE = 0, PREFILTER_XSOBEL = 1,
-        BASIC_PRESET=0, FISH_EYE_PRESET=1, NARROW_PRESET=2 };
+           BASIC_PRESET=0, FISH_EYE_PRESET=1, NARROW_PRESET=2 };
 
     //! the default constructor
     CV_WRAP StereoBM();
@@ -692,11 +711,7 @@ public:
 };
 
 
-/*!
- Semi-Global Block Matching Stereo Correspondence Algorithm
-
- The class implements the original SGBM stereo correspondence algorithm by H. Hirschmuller and some its modification.
- */
+// to be moved to "compat" module
 class CV_EXPORTS_W StereoSGBM
 {
 public:
@@ -731,7 +746,7 @@ public:
     CV_PROP_RW bool fullDP;
 
 protected:
-    Mat buffer;
+    Ptr<StereoMatcher> sm;
 };
 
 //! filters off speckles (small regions of incorrectly computed disparity)
