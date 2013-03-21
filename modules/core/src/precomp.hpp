@@ -47,7 +47,8 @@
 #include "cvconfig.h"
 #endif
 
-#include "opencv2/core/core.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/core/utility.hpp"
 #include "opencv2/core/core_c.h"
 #include "opencv2/core/internal.hpp"
 
@@ -64,6 +65,25 @@
 #include "opencv2/core/core_tegra.hpp"
 #else
 #define GET_OPTIMIZED(func) (func)
+#endif
+
+#ifdef HAVE_CUDA
+#  include <cuda_runtime_api.h>
+#  include "opencv2/core/gpumat.hpp"
+
+#  if defined(__GNUC__)
+#    define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__, __func__)
+#  else
+#    define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__)
+#  endif
+
+static inline void ___cudaSafeCall(cudaError_t err, const char *file, const int line, const char *func = "")
+{
+    if (cudaSuccess != err) cv::gpu::error(cudaGetErrorString(err), file, line, func);
+}
+
+#else
+#  define cudaSafeCall(expr)
 #endif
 
 namespace cv

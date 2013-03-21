@@ -47,8 +47,10 @@
 #include "cvconfig.h"
 #endif
 
-#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/imgproc.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
+
+#include "opencv2/core/utility.hpp"
 #include "opencv2/core/internal.hpp"
 #include <math.h>
 #include <assert.h>
